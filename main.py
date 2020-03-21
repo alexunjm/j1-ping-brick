@@ -7,7 +7,176 @@ ALTO = 480  # Alto de la pantalla.
 color_azul = (0, 0, 64)  # Color azul para el fondo.
 color_blanco = (255, 255, 255) # Color blanco, para textos.
 
-pygame.init()
+
+class Escena:
+    "Esqueleto para cada una de las escenas del videojuego."
+    def __init__(self):
+        self.proximaEscena = False
+        self.jugando = True
+
+    def leer_eventos(self, eventos):
+        "Lee los eventos para interactuar con los objetos."
+        pass
+
+    def actualizar(self):
+        "Actualiza los objetos en la pantalla."
+        pass
+
+    def dibujar(self, pantalla):
+        "Dibuja los objetos en la pantalla."
+        pass
+
+    def cambiar_escena(self, escena):
+        "Cambia la escena del juego."
+        self.proximaEscena = escena
+
+class Director:
+    def __init__(self, titulo = "", res = (ANCHO, ALTO)):
+        pygame.init()
+        # Inicializando pantalla.
+        self.pantalla = pygame.display.set_mode(res)
+        # Configurar tÃ­tulo de pantalla.
+        pygame.display.set_caption(titulo)
+        # Crear el reloj.
+        self.reloj = pygame.time.Clock()
+        self.escena = None
+        self.escenas = {}
+
+    def ejecutar(self, escena_inicial, fps = 60):
+        self.escena = self.escenas[escena_inicial]
+        jugando = True
+        while jugando:
+            self.reloj.tick(fps)
+            eventos = pygame.event.get()
+            # Revisar todos los eventos.
+            for evento in eventos:
+                # Si se presiona la tachita de la barra de tÃ­tulo,
+                if evento.type == pygame.QUIT:
+                    # cerrar el videojuego.
+                    jugando = False
+
+            self.escena.leer_eventos(eventos)
+            self.escena.actualizar()
+            self.escena.dibujar(self.pantalla)
+
+            self.elegirEscena(self.escena.proximaEscena)
+
+            if jugando:
+                jugando = self.escena.jugando
+
+            pygame.display.flip()
+
+        time.sleep(3)
+
+    def elegirEscena(self, proximaEscena):
+        if proximaEscena:
+            if proximaEscena not in self.escenas:
+                self.agregarEscena(proximaEscena)
+            self.escena = self.escenas[proximaEscena]
+
+    def agregarEscena(self, escena):
+        escenaClase = 'Escena'+escena
+        escenaObj = globals()[escenaClase]
+        self.escenas[escena] = escenaObj();
+
+
+class EscenaNivel1(Escena):
+    def __init__(self):
+        Escena.__init__(self)
+
+        self.bolita = Bolita()
+        self.jugador = Paleta()
+        self.muro = Muro(50)
+
+        self.puntuacion = 0
+        self.vidas = 3
+        self.esperando_saque = True
+
+        # Ajustar repeticiÃ³n de evento de tecla presionada.
+        pygame.key.set_repeat(30)
+
+    def leer_eventos(self, eventos):
+        for evento in eventos:
+            if evento.type == pygame.KEYDOWN:
+                self.jugador.update(evento)
+                if self.esperando_saque == True and evento.key == pygame.K_SPACE:
+                    self.esperando_saque = False
+                    if self.bolita.rect.centerx < ANCHO / 2:
+                        self.bolita.speed = [3, -3]
+                    else:
+                        self.bolita.speed = [-3, -3]
+
+    def actualizar(self):
+        # Actualizar posiciÃ³n de la bolita.
+        if self.esperando_saque == False:
+            self.bolita.update()
+        else:
+            self.bolita.rect.midbottom = self.jugador.rect.midtop
+
+        # ColisiÃ³n entre bolita y jugador.
+        if pygame.sprite.collide_rect(self.bolita, self.jugador):
+            self.bolita.speed[1] = -self.bolita.speed[1]
+
+        # ColisiÃ³n de la bolita con el muro.
+        lista = pygame.sprite.spritecollide(self.bolita, self.muro, False)
+        if lista:
+            ladrillo = lista[0]
+            cx = self.bolita.rect.centerx
+            if cx < ladrillo.rect.left or cx > ladrillo.rect.right:
+                self.bolita.speed[0] = -self.bolita.speed[0]
+            else:
+                self.bolita.speed[1] = -self.bolita.speed[1]
+            self.muro.remove(ladrillo)
+            self.puntuacion += 10
+
+        # Revisar si bolita sale de la pantalla.
+        if self.bolita.rect.top > ALTO:
+            self.vidas -= 1
+            self.esperando_saque = True
+
+        if self.vidas <= 0:
+            self.cambiar_escena('JuegoTerminado')
+
+    def dibujar(self, pantalla):
+        # Rellenar la pantalla.
+        pantalla.fill(color_azul)
+        # Mostrar puntuaciÃ³n
+        self.mostrar_puntuacion(pantalla)
+        # Mostrar vidas.
+        self.mostrar_vidas(pantalla)
+        # Dibujar bolita en pantalla.
+        pantalla.blit(self.bolita.image, self.bolita.rect)
+        # Dibujar jugador en pantalla.
+        pantalla.blit(self.jugador.image, self.jugador.rect)
+        # Dibujar los ladrillos.
+        self.muro.draw(pantalla)
+
+    def mostrar_puntuacion(self, pantalla):
+        fuente = pygame.font.SysFont('Consolas', 20)
+        texto = fuente.render(str(self.puntuacion).zfill(5), True, color_blanco)
+        texto_rect = texto.get_rect()
+        texto_rect.topleft = [0, 0]
+        pantalla.blit(texto, texto_rect)
+
+    def mostrar_vidas(self, pantalla):
+        fuente = pygame.font.SysFont('Consolas', 20)
+        cadena = "Vidas: " + str(self.vidas).zfill(2)
+        texto = fuente.render(cadena, True, color_blanco)
+        texto_rect = texto.get_rect()
+        texto_rect.topright = [ANCHO, 0]
+        pantalla.blit(texto, texto_rect)
+
+class EscenaJuegoTerminado(Escena):
+    def actualizar(self):
+        self.jugando = False
+
+    def dibujar(self, pantalla):
+        fuente = pygame.font.SysFont('Arial', 72)
+        texto = fuente.render('Juego terminado :(', True, color_blanco)
+        texto_rect = texto.get_rect()
+        texto_rect.center = [ANCHO / 2, ALTO / 2]
+        pantalla.blit(texto, texto_rect)
+
 
 class Bolita(pygame.sprite.Sprite):
     def __init__(self):
@@ -81,111 +250,6 @@ class Muro(pygame.sprite.Group):
                 pos_x = 0
                 pos_y += ladrillo.rect.height
 
-# FunciÃ³n llamada tras dejar ir la bolita.
-def juego_terminado():
-    fuente = pygame.font.SysFont('Arial', 72)
-    texto = fuente.render('Juego terminado :(', True, color_blanco)
-    texto_rect = texto.get_rect()
-    texto_rect.center = [ANCHO / 2, ALTO / 2]
-    pantalla.blit(texto, texto_rect)
-    pygame.display.flip()
-    # Pausar por tres segundos
-    time.sleep(3)
-    # Salir.
-    sys.exit()
-
-def mostrar_puntuacion():
-    fuente = pygame.font.SysFont('Consolas', 20)
-    texto = fuente.render(str(puntuacion).zfill(5), True, color_blanco)
-    texto_rect = texto.get_rect()
-    texto_rect.topleft = [0, 0]
-    pantalla.blit(texto, texto_rect)
-
-def mostrar_vidas():
-    fuente = pygame.font.SysFont('Consolas', 20)
-    cadena = "Vidas: " + str(vidas).zfill(2)
-    texto = fuente.render(cadena, True, color_blanco)
-    texto_rect = texto.get_rect()
-    texto_rect.topright = [ANCHO, 0]
-    pantalla.blit(texto, texto_rect)
-
-# Inicializando pantalla.
-pantalla = pygame.display.set_mode((ANCHO, ALTO))
-# Configurar tÃ­tulo de pantalla.
-pygame.display.set_caption('Juego de ladrillos')
-# Crear el reloj.
-reloj = pygame.time.Clock()
-# Ajustar repeticiÃ³n de evento de tecla presionada.
-pygame.key.set_repeat(30)
-
-bolita = Bolita()
-jugador = Paleta()
-muro = Muro(50)
-puntuacion = 0
-vidas = 3
-esperando_saque = True
-
-while True:
-    # Establecer FPS.
-    reloj.tick(60)
-
-    # Revisar todos los eventos.
-    for evento in pygame.event.get():
-        # Si se presiona la tachita de la barra de tÃ­tulo,
-        if evento.type == pygame.QUIT:
-            # cerrar el videojuego.
-            sys.exit()
-        # Buscar eventos del teclado,
-        elif evento.type == pygame.KEYDOWN:
-            jugador.update(evento)
-            if esperando_saque == True and evento.key == pygame.K_SPACE:
-                esperando_saque = False
-                if bolita.rect.centerx < ANCHO / 2:
-                    bolita.speed = [3, -3]
-                else:
-                    bolita.speed = [-3, -3]
-
-    # Actualizar posiciÃ³n de la bolita.
-    if esperando_saque == False:
-        bolita.update()
-    else:
-        bolita.rect.midbottom = jugador.rect.midtop
-
-    # ColisiÃ³n entre bolita y jugador.
-    if pygame.sprite.collide_rect(bolita, jugador):
-        bolita.speed[1] = -bolita.speed[1]
-
-    # ColisiÃ³n de la bolita con el muro.
-    lista = pygame.sprite.spritecollide(bolita, muro, False)
-    if lista:
-        ladrillo = lista[0]
-        cx = bolita.rect.centerx
-        if cx < ladrillo.rect.left or cx > ladrillo.rect.right:
-            bolita.speed[0] = -bolita.speed[0]
-        else:
-            bolita.speed[1] = -bolita.speed[1]
-        muro.remove(ladrillo)
-        puntuacion += 10
-
-    # Revisar si bolita sale de la pantalla.
-    if bolita.rect.top > ALTO:
-        vidas -= 1
-        esperando_saque = True
-
-    # Rellenar la pantalla.
-    pantalla.fill(color_azul)
-    # Mostrar puntuaciÃ³n
-    mostrar_puntuacion()
-    # Mostrar vidas.
-    mostrar_vidas()
-    # Dibujar bolita en pantalla.
-    pantalla.blit(bolita.image, bolita.rect)
-    # Dibujar jugador en pantalla.
-    pantalla.blit(jugador.image, jugador.rect)
-    # Dibujar el muro (con los ladrillos que tiene)
-    muro.draw(pantalla)
-    # Actualizar los elementos en pantalla.
-    pygame.display.flip()
-
-    if vidas <= 0:
-        juego_terminado()
+director = Director('Juego de ladrillos', (ANCHO, ALTO))
+director.agregarEscena('Nivel1')
+director.ejecutar('Nivel1')
