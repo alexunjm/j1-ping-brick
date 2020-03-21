@@ -88,7 +88,6 @@ pygame.key.set_repeat(30)
 
 bolita = Bolita()
 jugador = Paleta()
-# muro con 50 ladrillos
 muro = Muro(50)
 
 while True:
@@ -107,6 +106,21 @@ while True:
 
     # Actualizar posiciÃ³n de la bolita.
     bolita.update()
+
+    # ColisiÃ³n entre bolita y jugador.
+    if pygame.sprite.collide_rect(bolita, jugador):
+        bolita.speed[1] = -bolita.speed[1]
+
+    # ColisiÃ³n de la bolita con el muro.
+    lista = pygame.sprite.spritecollide(bolita, muro, False)
+    if lista:
+        ladrillo = lista[0]
+        cx = bolita.rect.centerx
+        if cx < ladrillo.rect.left or cx > ladrillo.rect.right:
+            bolita.speed[0] = -bolita.speed[0]
+        else:
+            bolita.speed[1] = -bolita.speed[1]
+        muro.remove(ladrillo)
 
     # Rellenar la pantalla.
     pantalla.fill(color_azul)
