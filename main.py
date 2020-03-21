@@ -4,10 +4,23 @@ import pygame
 ANCHO = 640 # Ancho de la pantalla.
 ALTO = 480  # Alto de la pantalla.
 
+class Bolita(pygame.sprite.Sprite):
+    def __init__(self):
+        pygame.sprite.Sprite.__init__(self)
+        # Cargar imagen
+        self.image = pygame.image.load('img/bolita.png')
+        # Obtener rectÃ¡ngulo de la imagen
+        self.rect = self.image.get_rect()
+        # PosiciÃ³n inicial centrada en pantalla.
+        self.rect.centerx = ANCHO / 2
+        self.rect.centery = ALTO / 2
+
 # Inicializando pantalla.
 pantalla = pygame.display.set_mode((ANCHO, ALTO))
 # Configurar tÃ­tulo de pantalla.
 pygame.display.set_caption('Juego de ladrillos')
+
+bolita = Bolita()
 
 while True:
     # Revisar todos los eventos.
@@ -17,5 +30,7 @@ while True:
             # cerrar el videojuego.
             sys.exit()
 
+    # Dibujar bolita en pantalla.
+    pantalla.blit(bolita.image, bolita.rect)
     # Actualizar los elementos en pantalla.
     pygame.display.flip()
