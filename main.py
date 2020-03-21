@@ -1,9 +1,12 @@
 import sys    # para usar exit()
+import time   # para usar sleep()
 import pygame
 
 ANCHO = 640 # Ancho de la pantalla.
 ALTO = 480  # Alto de la pantalla.
 color_azul = (0, 0, 64)  # Color azul para el fondo.
+
+pygame.init()
 
 class Bolita(pygame.sprite.Sprite):
     def __init__(self):
@@ -20,7 +23,7 @@ class Bolita(pygame.sprite.Sprite):
 
     def update(self):
         # Evitar que salga por debajo.
-        if self.rect.bottom >= ALTO or self.rect.top <= 0:
+        if self.rect.top <= 0:
             self.speed[1] = -self.speed[1]
         # Evitar que salga por la derecha.
         elif self.rect.right >= ANCHO or self.rect.left <= 0:
@@ -77,6 +80,19 @@ class Muro(pygame.sprite.Group):
                 pos_x = 0
                 pos_y += ladrillo.rect.height
 
+# FunciÃ³n llamada tras dejar ir la bolita.
+def juego_terminado():
+    fuente = pygame.font.SysFont('Arial', 72)
+    texto = fuente.render('Juego terminado :(', True, (255, 255, 255))
+    texto_rect = texto.get_rect()
+    texto_rect.center = [ANCHO / 2, ALTO / 2]
+    pantalla.blit(texto, texto_rect)
+    pygame.display.flip()
+    # Pausar por tres segundos
+    time.sleep(3)
+    # Salir.
+    sys.exit()
+
 # Inicializando pantalla.
 pantalla = pygame.display.set_mode((ANCHO, ALTO))
 # Configurar tÃ­tulo de pantalla.
@@ -121,6 +137,10 @@ while True:
         else:
             bolita.speed[1] = -bolita.speed[1]
         muro.remove(ladrillo)
+
+    # Revisar si bolita sale de la pantalla.
+    if bolita.rect.top > ALTO:
+        juego_terminado()
 
     # Rellenar la pantalla.
     pantalla.fill(color_azul)
