@@ -52,6 +52,31 @@ class Paleta(pygame.sprite.Sprite):
         # Mover en base a posiciÃ³n actual y velocidad.
         self.rect.move_ip(self.speed)
 
+class Ladrillo(pygame.sprite.Sprite):
+    def __init__(self, posicion):
+        pygame.sprite.Sprite.__init__(self)
+        # Cargar imagen
+        self.image = pygame.image.load('img/ladrillo.png')
+        # Obtener rectÃ¡ngulo de la imagen
+        self.rect = self.image.get_rect()
+        # PosiciÃ³n inicial, provista externamente.
+        self.rect.topleft = posicion
+
+class Muro(pygame.sprite.Group):
+    def __init__(self, cantidadLadrillos):
+        pygame.sprite.Group.__init__(self)
+
+        pos_x = 0
+        pos_y = 20
+        for i in range(cantidadLadrillos):
+            ladrillo = Ladrillo((pos_x, pos_y))
+            self.add(ladrillo)
+
+            pos_x += ladrillo.rect.width
+            if pos_x >= ANCHO:
+                pos_x = 0
+                pos_y += ladrillo.rect.height
+
 # Inicializando pantalla.
 pantalla = pygame.display.set_mode((ANCHO, ALTO))
 # Configurar tÃ­tulo de pantalla.
@@ -63,6 +88,8 @@ pygame.key.set_repeat(30)
 
 bolita = Bolita()
 jugador = Paleta()
+# muro con 50 ladrillos
+muro = Muro(50)
 
 while True:
     # Establecer FPS.
@@ -87,5 +114,7 @@ while True:
     pantalla.blit(bolita.image, bolita.rect)
     # Dibujar jugador en pantalla.
     pantalla.blit(jugador.image, jugador.rect)
+    # Dibujar el muro (con los ladrillos que tiene)
+    muro.draw(pantalla)
     # Actualizar los elementos en pantalla.
     pygame.display.flip()
